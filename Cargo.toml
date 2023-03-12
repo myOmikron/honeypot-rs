@@ -10,4 +10,4 @@ authors = ["Niklas Pfister <git@omikron.dev>"]
 
 [dependencies]
 # Async runtime
-tokio = { version = "~1", features = ["sync", "rt-multi-thread", "net", "macros"] }
+tokio = { version = ">=1.23.1", features = ["sync", "rt-multi-thread", "net", "macros"] }

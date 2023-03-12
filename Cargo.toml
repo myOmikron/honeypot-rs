@@ -1,0 +1,13 @@
+[package]
+name = "honeypot-rs"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0"
+repository = "https://github.com/myOmikron/honeypot-rs"
+authors = ["Niklas Pfister <git@omikron.dev>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# Async runtime
+tokio = { version = "~1", features = ["sync", "rt-multi-thread", "net", "macros"] }

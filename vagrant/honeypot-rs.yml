@@ -1,0 +1,83 @@
+---
+- name: Provision honeypot server
+  hosts: honeypot
+  vars:
+    ansible_become: yes
+  vars_files:
+    - vars.yml
+  tasks:
+    - name: Install dependencies
+      ansible.builtin.apt:
+        name:
+          - libssl-dev
+          - libpcap-dev
+
+    - name: Check for rustup
+      ansible.builtin.stat:
+        path: "/tmp/rustup.sh"
+      register: rustup_file
+    - name: Download rustup
+      become_user: vagrant
+      ansible.builtin.shell:
+        cmd: "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs > /tmp/rustup.sh"
+      when: not rustup_file.stat.exists
+    - name: Execute installer
+      become_user: vagrant
+      ansible.builtin.shell:
+        cmd: "sh /tmp/rustup.sh -y"
+      when: not rustup_file.stat.exists
+
+    - name: Create honeypot-rs group
+      ansible.builtin.group:
+        name: honeypot-rs
+    - name: Create honeypot-rs user
+      ansible.builtin.user:
+        name: honeypot-rs
+        system: yes
+        group: honeypot-rs
+
+    - name: Create /etc/honeypot-rs
+      ansible.builtin.file:
+        name: /etc/honeypot-rs
+        state: directory
+        mode: 0755
+        owner: root
+        group: honeypot-rs
+    - name: Apply honeypot-rs config.toml
+      template:
+        src: honeypot-rs/config.toml.jinja2
+        dest: /etc/honeypot-rs/config.toml
+        owner: root
+        group: honeypot-rs
+        mode: 0640
+
+    - name: Compile honeypot-rs
+      become_user: vagrant
+      ansible.builtin.command:
+        chdir: /vagrant
+        cmd: "/home/vagrant/.cargo/bin/cargo build -r -p honeypot-rs"
+    - name: Copy to /usr/local/bin
+      copy:
+        remote_src: yes
+        src: /vagrant/target/release/honeypot-rs
+        dest: /usr/local/bin/honeypot-rs
+        mode: 0755
+        owner: root
+
+    - name: Stop honeypot-rs.service
+      systemd:
+        name: honeypot-rs.service
+        state: stopped
+      ignore_errors: yes
+
+    - name: Install systemd service
+      copy:
+        src: honeypot-rs/honeypot-rs.service
+        dest: /etc/systemd/system/honeypot-rs.service
+        owner: root
+    - name: Restart honeypot-rs
+      systemd:
+        enabled: yes
+        daemon_reload: yes
+        name: honeypot-rs.service
+        state: restarted

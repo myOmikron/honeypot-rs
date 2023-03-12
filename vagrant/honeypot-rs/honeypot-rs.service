@@ -1,0 +1,50 @@
+[Unit]
+Description=honeypot server
+After=network.target
+
+[Service]
+Type=simple
+
+User=honeypot-rs
+Group=honeypot-rs
+
+RuntimeDirectory=honeypot-rs
+LogsDirectory=honeypot-rs
+StateDirectory=honeypot-rs
+ConfigurationDirectory=honeypot-rs
+
+MemoryDenyWriteExecute=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_PACKET AF_NETLINK
+RestrictRealtime=yes
+RestrictNamespaces=~user
+InaccessiblePaths=/boot
+UMask=0177
+PrivateDevices=yes
+CapabilityBoundingSet=CAP_NET_ADMIN CAP_NET_RAW
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+ProtectClock=yes
+SystemCallFilter=@system-service
+ProtectHome=yes
+PrivateTmp=yes
+RestrictSUIDSGID=yes
+NoNewPrivileges=yes
+LockPersonality=yes
+ProtectKernelLogs=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectProc=noaccess
+ProtectSystem=yes
+ProtectHostname=yes
+RemoveIPC=yes
+ProtectControlGroups=yes
+SystemCallArchitectures=native
+
+WorkingDirectory=/var/lib/honeypot-rs/
+ExecStart=/usr/local/bin/honeypot-rs
+
+Restart=always
+RestartSec=3
+TimeoutStopSec=3
+
+[Install]
+WantedBy=multi-user.target

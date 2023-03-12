@@ -1,3 +1,8 @@
 .idea/
+.vagrant/
+
+# This is the file where secrets of ansible are located.
+# Refer to vagrant/.vars.yml
+vagrant/vars.yml
 
 /target

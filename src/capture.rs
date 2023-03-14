@@ -205,7 +205,7 @@ pub fn start_icmp_v6_capture(
 
     info!("Opened device {capture_device} for icmp_v6 capturing");
 
-    let filter = format!("! src host {hostname} && dst host {hostname} && icmp6");
+    let filter = format!("! src host {hostname} && dst host {hostname} && ip proto imcp6");
     cap.filter(&filter, true)
         .map_err(|_| "Could not apply icmp_v6 filter")?;
 

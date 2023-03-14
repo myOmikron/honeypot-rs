@@ -9,7 +9,7 @@ use etherparse::{IpHeader, PacketHeaders, TransportHeader};
 use log::{debug, error, info};
 use pcap::{Active, Capture};
 
-use crate::packets::{Packet, PacketType};
+use crate::packets::Packet;
 
 /// Open a device for capturing
 ///
@@ -42,15 +42,17 @@ pub fn get_packet_from_headers(headers: PacketHeaders) -> Packet {
     };
 
     match headers.transport {
-        Some(TransportHeader::Tcp(tcp)) => Packet {
-            packet_type: PacketType::Tcp,
-            source: (source_address, tcp.source_port),
-            destination: (destination_address, tcp.destination_port),
+        Some(TransportHeader::Tcp(tcp)) => Packet::Tcp {
+            source_address,
+            source_port: tcp.source_port,
+            destination_address,
+            destination_port: tcp.destination_port,
         },
-        Some(TransportHeader::Udp(udp)) => Packet {
-            packet_type: PacketType::Udp,
-            source: (source_address, udp.source_port),
-            destination: (destination_address, udp.destination_port),
+        Some(TransportHeader::Udp(udp)) => Packet::Udp {
+            source_address,
+            source_port: udp.source_port,
+            destination_address,
+            destination_port: udp.destination_port,
         },
         _ => unreachable!("Invalid packet"),
     }

@@ -29,9 +29,6 @@ toml = { version = "~0.7" }
 # Parse captured packets
 etherparse = { version = "~0.13" }
 
-# Rust bindings for *nix functionality
-nix = { version = "~0.26", features = ["hostname"] }
-
 # Async runtime
 tokio = { version = ">=1.23.1", features = ["sync", "rt-multi-thread", "net", "macros"] }
 futures = { version = "~0.3" }

@@ -7,7 +7,6 @@ use std::sync::mpsc;
 
 use clap::Parser;
 use log::debug;
-use nix::unistd::gethostname;
 use pcap::Device;
 
 use crate::capture::{
@@ -40,16 +39,10 @@ async fn main() -> Result<(), String> {
     let cli = Cli::parse();
     let config = get_config(&cli.config_path)?;
 
-    let hostname = gethostname()
-        .map_err(|e| format!("Error retrieving hostname: {e}"))?
-        .into_string()
-        .map_err(|_| "Invalid UTF-8 found in hostname".to_string())?;
-
     let addresses = Device::list()
         .map_err(|e| format!("Error obtaining devices: {e}"))?
         .into_iter()
-        .filter(|d| &d.name == &config.honeypot.device)
-        .next()
+        .find(|d| d.name == config.honeypot.device)
         .ok_or(format!(
             "Couldn't find device with name {}",
             &config.honeypot.device

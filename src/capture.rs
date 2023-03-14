@@ -187,3 +187,43 @@ pub fn start_icmp_capture(
         }
     }))
 }
+
+/// Start capturing icmp v6 packets from the given capture device
+///
+/// Any captured packets will be parsed in [Packet] and send via provided channel.
+///
+/// `hostname`: [&str]: The hostname of the executing system. This will be used to check if packets
+/// are incoming or outgoing.
+/// `capture_device`: [&str]: The name of the device that should be used for capturing.
+/// `tx`: [Sender] of [Packet]. The received packets will be sent via this sender.
+pub fn start_icmp_v6_capture(
+    hostname: &str,
+    capture_device: &str,
+    tx: Sender<Packet>,
+) -> Result<JoinHandle<()>, String> {
+    let mut cap = open_device(capture_device)?;
+
+    info!("Opened device {capture_device} for icmp_v6 capturing");
+
+    let filter = format!("! src host {hostname} && dst host {hostname} && icmp6");
+    cap.filter(&filter, true)
+        .map_err(|_| "Could not apply icmp_v6 filter")?;
+
+    debug!("Applied filter: {filter}");
+
+    Ok(thread::spawn(move || {
+        while let Ok(packet) = cap.next_packet() {
+            let p = match PacketHeaders::from_ethernet_slice(packet.data) {
+                Ok(h) => get_packet_from_headers(h),
+                Err(err) => {
+                    error!("Error deserializing icmp_v6 packet: {err}");
+                    continue;
+                }
+            };
+
+            if let Err(err) = tx.send(p) {
+                error!("Error sending packet to tx: {err}");
+            }
+        }
+    }))
+}

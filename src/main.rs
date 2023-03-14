@@ -9,7 +9,9 @@ use clap::Parser;
 use log::debug;
 use nix::unistd::gethostname;
 
-use crate::capture::{start_icmp_capture, start_tcp_capture, start_udp_capture};
+use crate::capture::{
+    start_icmp_capture, start_icmp_v6_capture, start_tcp_capture, start_udp_capture,
+};
 use crate::config::get_config;
 
 pub mod capture;

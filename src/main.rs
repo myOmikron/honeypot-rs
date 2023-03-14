@@ -2,16 +2,19 @@
 
 #![warn(missing_docs)]
 
-use std::path::Path;
-use std::{env, fs};
+use std::env;
+use std::sync::mpsc;
 
 use clap::Parser;
-use log::info;
-use pcap::Capture;
+use log::debug;
+use nix::unistd::gethostname;
 
-use crate::config::Config;
+use crate::capture::{start_tcp_capture, start_udp_capture};
+use crate::config::get_config;
 
+pub mod capture;
 pub mod config;
+pub mod packets;
 
 /// A honeypot written in rust
 #[derive(Parser)]
@@ -32,49 +35,21 @@ async fn main() -> Result<(), String> {
     env_logger::init();
 
     let cli = Cli::parse();
-
     let config = get_config(&cli.config_path)?;
 
-    let mut stream = Capture::from_device(config.honeypot.device.as_str())
-        .map_err(|err| format!("Could not find device: {err}"))?
-        .timeout(100)
-        .open()
-        .map_err(|e| format!("Could not open dev: {e}"))?;
+    let hostname = gethostname()
+        .map_err(|e| format!("Error retrieving hostname: {e}"))?
+        .into_string()
+        .map_err(|_| "Invalid UTF-8 found in hostname".to_string())?;
 
-    stream
-        .filter(
-            "dst net 127.0.0.0/8 && ! src net 127.0.0.0/8 && (tcp || udp)",
-            true,
-        )
-        .map_err(|err| format!("Could not apply filter: {err}"))?;
+    let (tx, rx) = mpsc::channel();
 
-    info!("Opened {}", config.honeypot.device);
+    let _tcp_handle = start_tcp_capture(&hostname, &config.honeypot.device, tx.clone())?;
+    let _udp_handle = start_udp_capture(&hostname, &config.honeypot.device, tx)?;
 
-    while let Ok(packet) = stream.next_packet() {
-        println!("{packet:?}");
+    while let Ok(packet) = rx.recv() {
+        debug!("Received packet: {packet}");
     }
 
     Ok(())
-}
-
-/// Retrieve the [Config] by a path
-///
-/// If the file does not exist or could not be parsed, an error is returned
-fn get_config(path: &str) -> Result<Config, String> {
-    let p = Path::new(path);
-    if !p.exists() {
-        return Err(format!("Config file {path} does not exist"));
-    }
-
-    if !p.is_file() {
-        return Err(format!("Config file {path} is no file"));
-    }
-
-    let config_str =
-        fs::read_to_string(p).map_err(|e| format!("Error reading from config file: {e}"))?;
-
-    let config =
-        toml::from_str(&config_str).map_err(|e| format!("Error parsing config file: {e}"))?;
-
-    Ok(config)
 }

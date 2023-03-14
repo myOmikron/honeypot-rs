@@ -8,6 +8,7 @@ use std::sync::mpsc;
 use clap::Parser;
 use log::debug;
 use nix::unistd::gethostname;
+use pcap::Device;
 
 use crate::capture::{
     start_icmp_capture, start_icmp_v6_capture, start_tcp_capture, start_udp_capture,
@@ -44,12 +45,23 @@ async fn main() -> Result<(), String> {
         .into_string()
         .map_err(|_| "Invalid UTF-8 found in hostname".to_string())?;
 
+    let addresses = Device::list()
+        .map_err(|e| format!("Error obtaining devices: {e}"))?
+        .into_iter()
+        .filter(|d| &d.name == &config.honeypot.device)
+        .next()
+        .ok_or(format!(
+            "Couldn't find device with name {}",
+            &config.honeypot.device
+        ))?
+        .addresses;
+
     let (tx, rx) = mpsc::channel();
 
-    let _tcp_handle = start_tcp_capture(&hostname, &config.honeypot.device, tx.clone())?;
-    let _udp_handle = start_udp_capture(&hostname, &config.honeypot.device, tx.clone())?;
-    let _icmp_handle = start_icmp_capture(&hostname, &config.honeypot.device, tx.clone())?;
-    let _icmp_handle = start_icmp_v6_capture(&hostname, &config.honeypot.device, tx)?;
+    let _tcp_handle = start_tcp_capture(&addresses, &config.honeypot.device, tx.clone())?;
+    let _udp_handle = start_udp_capture(&addresses, &config.honeypot.device, tx.clone())?;
+    let _icmp_handle = start_icmp_capture(&addresses, &config.honeypot.device, tx.clone())?;
+    let _icmp_handle = start_icmp_v6_capture(&addresses, &config.honeypot.device, tx)?;
 
     while let Ok(packet) = rx.recv() {
         debug!("Received packet: {packet}");

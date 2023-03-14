@@ -7,7 +7,7 @@ use std::thread::JoinHandle;
 
 use etherparse::{IpHeader, PacketHeaders, TransportHeader};
 use log::{debug, error, info};
-use pcap::{Active, Capture};
+use pcap::{Active, Address, Capture};
 
 use crate::packets::Packet;
 
@@ -70,12 +70,12 @@ pub fn get_packet_from_headers(headers: PacketHeaders) -> Packet {
 ///
 /// Any captured packets will be parsed in [Packet] and send via provided channel.
 ///
-/// `hostname`: [&str]: The hostname of the executing system. This will be used to check if packets
-/// are incoming or outgoing.
+/// `addresses`: Slice of [Address]: The hostname of the executing system.
+/// This will be used to check if packets are incoming or outgoing.
 /// `capture_device`: [&str]: The name of the device that should be used for capturing.
 /// `tx`: [Sender] of [Packet]. The received packets will be sent via this sender.
 pub fn start_tcp_capture(
-    hostname: &str,
+    addresses: &[Address],
     capture_device: &str,
     tx: Sender<Packet>,
 ) -> Result<JoinHandle<()>, String> {
@@ -83,7 +83,19 @@ pub fn start_tcp_capture(
 
     info!("Opened device {capture_device} for tcp capturing");
 
-    let filter = format!("! src host {hostname} && dst host {hostname} && tcp");
+    let filter = format!(
+        "({}) && ({}) && tcp",
+        addresses
+            .iter()
+            .map(|a| format!("! src host {}", a.addr))
+            .collect::<Vec<String>>()
+            .join(" || "),
+        addresses
+            .iter()
+            .map(|a| format!("dst host {}", a.addr))
+            .collect::<Vec<String>>()
+            .join(" || ")
+    );
     cap.filter(&filter, true)
         .map_err(|_| "Could not apply tcp filter")?;
 
@@ -112,12 +124,12 @@ pub fn start_tcp_capture(
 ///
 /// Any captured packets will be parsed in [Packet] and send via provided channel.
 ///
-/// `hostname`: [&str]: The hostname of the executing system. This will be used to check if packets
-/// are incoming or outgoing.
+/// `addresses`: Slice of [Address]: The hostname of the executing system.
+/// This will be used to check if packets are incoming or outgoing.
 /// `capture_device`: [&str]: The name of the device that should be used for capturing.
 /// `tx`: [Sender] of [Packet]. The received packets will be sent via this sender.
 pub fn start_udp_capture(
-    hostname: &str,
+    addresses: &[Address],
     capture_device: &str,
     tx: Sender<Packet>,
 ) -> Result<JoinHandle<()>, String> {
@@ -125,7 +137,19 @@ pub fn start_udp_capture(
 
     info!("Opened device {capture_device} for udp capturing");
 
-    let filter = format!("! src host {hostname} && dst host {hostname} && udp");
+    let filter = format!(
+        "({}) && ({}) && udp",
+        addresses
+            .iter()
+            .map(|a| format!("! src host {}", a.addr))
+            .collect::<Vec<String>>()
+            .join(" || "),
+        addresses
+            .iter()
+            .map(|a| format!("dst host {}", a.addr))
+            .collect::<Vec<String>>()
+            .join(" || ")
+    );
     cap.filter(&filter, true)
         .map_err(|_| "Could not apply udp filter")?;
 
@@ -152,12 +176,12 @@ pub fn start_udp_capture(
 ///
 /// Any captured packets will be parsed in [Packet] and send via provided channel.
 ///
-/// `hostname`: [&str]: The hostname of the executing system. This will be used to check if packets
-/// are incoming or outgoing.
+/// `addresses`: Slice of [Address]: The hostname of the executing system.
+/// This will be used to check if packets are incoming or outgoing.
 /// `capture_device`: [&str]: The name of the device that should be used for capturing.
 /// `tx`: [Sender] of [Packet]. The received packets will be sent via this sender.
 pub fn start_icmp_capture(
-    hostname: &str,
+    addresses: &[Address],
     capture_device: &str,
     tx: Sender<Packet>,
 ) -> Result<JoinHandle<()>, String> {
@@ -165,7 +189,19 @@ pub fn start_icmp_capture(
 
     info!("Opened device {capture_device} for icmp capturing");
 
-    let filter = format!("! src host {hostname} && dst host {hostname} && icmp");
+    let filter = format!(
+        "({}) && ({}) && icmp",
+        addresses
+            .iter()
+            .map(|a| format!("! src host {}", a.addr))
+            .collect::<Vec<String>>()
+            .join(" || "),
+        addresses
+            .iter()
+            .map(|a| format!("dst host {}", a.addr))
+            .collect::<Vec<String>>()
+            .join(" || ")
+    );
     cap.filter(&filter, true)
         .map_err(|_| "Could not apply icmp filter")?;
 
@@ -192,12 +228,12 @@ pub fn start_icmp_capture(
 ///
 /// Any captured packets will be parsed in [Packet] and send via provided channel.
 ///
-/// `hostname`: [&str]: The hostname of the executing system. This will be used to check if packets
-/// are incoming or outgoing.
+/// `addresses`: Slice of [Address]: The hostname of the executing system.
+/// This will be used to check if packets are incoming or outgoing.
 /// `capture_device`: [&str]: The name of the device that should be used for capturing.
 /// `tx`: [Sender] of [Packet]. The received packets will be sent via this sender.
 pub fn start_icmp_v6_capture(
-    hostname: &str,
+    addresses: &[Address],
     capture_device: &str,
     tx: Sender<Packet>,
 ) -> Result<JoinHandle<()>, String> {
@@ -205,7 +241,19 @@ pub fn start_icmp_v6_capture(
 
     info!("Opened device {capture_device} for icmp_v6 capturing");
 
-    let filter = format!("! src host {hostname} && dst host {hostname} && ip proto imcp6");
+    let filter = format!(
+        "({}) && ({}) && icmp6",
+        addresses
+            .iter()
+            .map(|a| format!("! src host {}", a.addr))
+            .collect::<Vec<String>>()
+            .join(" || "),
+        addresses
+            .iter()
+            .map(|a| format!("dst host {}", a.addr))
+            .collect::<Vec<String>>()
+            .join(" || ")
+    );
     cap.filter(&filter, true)
         .map_err(|_| "Could not apply icmp_v6 filter")?;
 

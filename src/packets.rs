@@ -28,6 +28,20 @@ pub enum Packet {
         /// The destination port of the packet
         destination_port: u16,
     },
+    /// an icmp v4 packet
+    IcmpV4 {
+        /// The source address of the packet
+        source_address: IpAddr,
+        /// The destination address of the packet
+        destination_address: IpAddr,
+    },
+    /// an icmp v6 packet
+    IcmpV6 {
+        /// The source address of the packet
+        source_address: IpAddr,
+        /// The destination address of the packet
+        destination_address: IpAddr,
+    },
 }
 
 impl Display for Packet {
@@ -54,6 +68,18 @@ impl Display for Packet {
                     f,
                     "udp {{{source_address}:{source_port} -> {destination_address}:{destination_port}}}",
                 )
+            }
+            Packet::IcmpV4 {
+                source_address,
+                destination_address,
+            } => {
+                write!(f, "icmp_v4 {{{source_address} -> {destination_address}}}")
+            }
+            Packet::IcmpV6 {
+                source_address,
+                destination_address,
+            } => {
+                write!(f, "icmp_v6 {{{source_address} -> {destination_address}}}")
             }
         }
     }

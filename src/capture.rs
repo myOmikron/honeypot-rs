@@ -54,6 +54,14 @@ pub fn get_packet_from_headers(headers: PacketHeaders) -> Packet {
             destination_address,
             destination_port: udp.destination_port,
         },
+        Some(TransportHeader::Icmpv4(_icmp_v4)) => Packet::IcmpV4 {
+            source_address,
+            destination_address,
+        },
+        Some(TransportHeader::Icmpv6(_icmp_v6)) => Packet::IcmpV6 {
+            source_address,
+            destination_address,
+        },
         _ => unreachable!("Invalid packet"),
     }
 }
@@ -129,6 +137,46 @@ pub fn start_udp_capture(
                 Ok(h) => get_packet_from_headers(h),
                 Err(err) => {
                     error!("Error deserializing udp packet: {err}");
+                    continue;
+                }
+            };
+
+            if let Err(err) = tx.send(p) {
+                error!("Error sending packet to tx: {err}");
+            }
+        }
+    }))
+}
+
+/// Start capturing icmp packets from the given capture device
+///
+/// Any captured packets will be parsed in [Packet] and send via provided channel.
+///
+/// `hostname`: [&str]: The hostname of the executing system. This will be used to check if packets
+/// are incoming or outgoing.
+/// `capture_device`: [&str]: The name of the device that should be used for capturing.
+/// `tx`: [Sender] of [Packet]. The received packets will be sent via this sender.
+pub fn start_icmp_capture(
+    hostname: &str,
+    capture_device: &str,
+    tx: Sender<Packet>,
+) -> Result<JoinHandle<()>, String> {
+    let mut cap = open_device(capture_device)?;
+
+    info!("Opened device {capture_device} for icmp capturing");
+
+    let filter = format!("! src host {hostname} && dst host {hostname} && icmp");
+    cap.filter(&filter, true)
+        .map_err(|_| "Could not apply icmp filter")?;
+
+    debug!("Applied filter: {filter}");
+
+    Ok(thread::spawn(move || {
+        while let Ok(packet) = cap.next_packet() {
+            let p = match PacketHeaders::from_ethernet_slice(packet.data) {
+                Ok(h) => get_packet_from_headers(h),
+                Err(err) => {
+                    error!("Error deserializing icmp packet: {err}");
                     continue;
                 }
             };

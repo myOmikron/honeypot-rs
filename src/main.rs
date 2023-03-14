@@ -9,7 +9,7 @@ use clap::Parser;
 use log::debug;
 use nix::unistd::gethostname;
 
-use crate::capture::{start_tcp_capture, start_udp_capture};
+use crate::capture::{start_icmp_capture, start_tcp_capture, start_udp_capture};
 use crate::config::get_config;
 
 pub mod capture;
@@ -45,7 +45,8 @@ async fn main() -> Result<(), String> {
     let (tx, rx) = mpsc::channel();
 
     let _tcp_handle = start_tcp_capture(&hostname, &config.honeypot.device, tx.clone())?;
-    let _udp_handle = start_udp_capture(&hostname, &config.honeypot.device, tx)?;
+    let _udp_handle = start_udp_capture(&hostname, &config.honeypot.device, tx.clone())?;
+    let _icmp_handle = start_icmp_capture(&hostname, &config.honeypot.device, tx)?;
 
     while let Ok(packet) = rx.recv() {
         debug!("Received packet: {packet}");
